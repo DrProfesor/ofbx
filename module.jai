@@ -978,7 +978,7 @@ ofbx :: struct {
 
     		if property.encoding == 0 {
     			if property.compressed_len > max_size {
-    				print("Array to long for max size. % %\n", max_size, property.compressed_len);
+    				log("Array to long for max size. % %\n", max_size, property.compressed_len);
     				return false;
     			}
 
@@ -1168,7 +1168,7 @@ ofbx :: struct {
 
     read_property :: (d: *Deserializer, allocator: Allocator) -> prop: *Property {
     	if d.cursor >= d.buffer.count {
-    		print("reading past the end\n");
+    		log("reading past the end\n");
     		return null;
     	}
     	prop := New(Property, true, allocator);
@@ -1299,12 +1299,12 @@ ofbx :: struct {
     	id := read_text_token(d);
 
     	if d.cursor >= d.buffer.count {
-    		print("Unexpected end of file\n");
+    		log("Unexpected end of file\n");
     		return null;
     	}
 
     	if peak(d, u8) != #char ":" {
-    		print("Unexpected character\n");
+    		log("Unexpected character\n");
     		return null;
     	}
 
@@ -1312,7 +1312,7 @@ ofbx :: struct {
 
     	skip_insignificant_whitespace(d);
     	if d.cursor >= d.buffer.count {
-    		print("Unexpected end of file\n");
+    		log("Unexpected end of file\n");
     		return null;
     	}
 
@@ -1446,7 +1446,7 @@ ofbx :: struct {
     		if connection.first_property.type != .STRING ||
 	    	   connection.first_property.next.type != .LONG ||
 	    	   connection.first_property.next.next.type != .LONG {
-	    	   	print("Invalid Connection\n");
+	    	   	log("Invalid Connection\n");
 	    	   	return false;
 	    	}
 
@@ -1460,13 +1460,13 @@ ofbx :: struct {
     			c.type = .OBJECT_PROPERTY;
 
     			if connection.first_property.next.next.next == null {
-    				print("Invalid Connection\n");
+    				log("Invalid Connection\n");
     				return false;
     			}
 
     			c.property = to_string(*connection.first_property.next.next.next.value.data[0]);
     		} else {
-    			print("Unsuported\n");
+    			log("Unsuported\n");
     			return false;
     		}
 
@@ -1496,7 +1496,7 @@ ofbx :: struct {
     	while object != null {
     		if object.id == "Take" {
     			if object.first_property.type != .STRING {
-    				print("Invalid name in take\n");
+    				log("Invalid name in take\n");
     				return false;
     			}
 
@@ -1506,7 +1506,7 @@ ofbx :: struct {
     			filename := find_child(object, "FileName");
     			if filename != null {
     				if filename.first_property.type != .STRING {
-    					print("Invalid file name in take\n");
+    					log("Invalid file name in take\n");
     					return false;
     				}
     				take.filename = filename.first_property.value;
@@ -1516,7 +1516,7 @@ ofbx :: struct {
     			if local_time != null {
     				if local_time.first_property.type != .LONG || 
     				   local_time.first_property.next.type != .LONG {
-    				   	print("Invalid local time in take\n");
+    				   	log("Invalid local time in take\n");
     				   	return false;
     				}
     				take.local_time_from = fbxTimeToSeconds(Property.to_s64(local_time.first_property));
@@ -1527,7 +1527,7 @@ ofbx :: struct {
     			if reference_time != null {
     				if reference_time.first_property.type != .LONG || 
     				   reference_time.first_property.next.type != .LONG {
-    				   	print("Invalid reference time in take\n");
+    				   	log("Invalid reference time in take\n");
     				   	return false;
     				}
     				take.reference_time_from = fbxTimeToSeconds(Property.to_s64(reference_time.first_property));
@@ -1560,7 +1560,7 @@ ofbx :: struct {
     	object := objs.child;
     	while object != null {
     		if object.first_property.type != .LONG {
-    			print("Invalid\n");
+    			log("Invalid\n");
     			return false;
     		}
 
@@ -1673,12 +1673,12 @@ ofbx :: struct {
     		child_op := table_find_pointer(*scene.object_map, con.from);
 
     		if parent_op == null {
-    			// print("Failed to find connection parent: %\n", con.to);
+    			// log("Failed to find connection parent: %\n", con.to);
     			continue;
     		}
 
     		if child_op == null {
-    			// print("Failed to find connection child: %\n", con.from);
+    			// log("Failed to find connection child: %\n", con.from);
     			continue;
     		}
 
@@ -1803,7 +1803,7 @@ ofbx :: struct {
     			if it.object.type == {
     				case .CLUSTER; {
     					if !Cluster.post_process(cast(*Cluster)it.object) {
-    						print("Failed to post process cluster");
+    						log("Failed to post process cluster");
     						return false;
     					}
     				}
@@ -1951,14 +1951,14 @@ ofbx :: struct {
     	reference_element := find_child(layer_material_element, "ReferenceInformationType");
 
     	if mapping_element == null || reference_element == null {
-    		print("Invalid LayerElementMaterial\n");
+    		log("Invalid LayerElementMaterial\n");
     		return false;
     	}
 
     	if mapping_element.first_property.value == "ByPolygon" && reference_element.first_property.value == "IndexToDirect" {
     	   	indices_element := find_child(layer_material_element, "Materials");
     	   	if indices_element == null || indices_element.first_property == null {
-    	   		print("Invalid LayerElementMaterial\n");
+    	   		log("Invalid LayerElementMaterial\n");
     	   		return false;
     	   	}
 
@@ -1966,7 +1966,7 @@ ofbx :: struct {
     	   	tmp.allocator = temp;
 
     	   	if !parse_binary_array(indices_element.first_property, *tmp) {
-    	   		print("failed to parse material indices\n");
+    	   		log("failed to parse material indices\n");
     	   		return false;
     	   	}
 
@@ -1979,7 +1979,7 @@ ofbx :: struct {
     	   	}
     	} else {
     		if mapping_element.first_property.value != "AllSame" {
-    			print("Mapping not supported\n");
+    			log("Mapping not supported\n");
     			return false;
     		}
     	}
@@ -1999,7 +1999,7 @@ ofbx :: struct {
 
 				mapping: Geometry.Vertex_Data_Mapping;
 				if !parse_vertex_data(layer_uv_element, "UV", "UVIndex", *tmp.v2, *tmp.i, *mapping, *tmp.f) {
-					print("Invalid UVs\n");
+					log("Invalid UVs\n");
 					return false;
 				}
 
@@ -2028,12 +2028,12 @@ ofbx :: struct {
 			mapping: Geometry.Vertex_Data_Mapping;
 			if find_child(layer_tangent_element, "Tangents") == null {
 				if !parse_vertex_data(layer_tangent_element, "Tangents", "TangentsIndex", *tmp.v3, *tmp.i, *mapping, *tmp.f) {
-					print("Invalid tangents\n");
+					log("Invalid tangents\n");
 					return false;
 				}
 			} else {
 				if !parse_vertex_data(layer_tangent_element, "Tangents", "TangentIndex", *tmp.v3, *tmp.i, *mapping, *tmp.f) {
-					print("Invalid tangents\n");
+					log("Invalid tangents\n");
 					return false;
 				}
 			}
@@ -2051,7 +2051,7 @@ ofbx :: struct {
 		if layer_color_element != null {
 			mapping: Geometry.Vertex_Data_Mapping;
 			if !parse_vertex_data(layer_color_element, "Colors", "ColorIndex", *tmp.v4, *tmp.i, *mapping, *tmp.f) {
-				print("Invalid Colors\n");
+				log("Invalid Colors\n");
 				return false;
 			}
 			if tmp.v4.count != 0 {
@@ -2067,7 +2067,7 @@ ofbx :: struct {
 		if layer_normal_element != null {
 			mapping: Geometry.Vertex_Data_Mapping;
 			if !parse_vertex_data(layer_normal_element, "Normals", "NormalsIndex", *tmp.v3, *tmp.i, *mapping, *tmp.f) {
-				print("Invalid Normals\n");
+				log("Invalid Normals\n");
 				return false;
 			}
 			if tmp.v3.count != 0 {
@@ -2160,39 +2160,39 @@ ofbx :: struct {
 		temp: Temporaries;
 
 		if !parse_double_vec_data(vertices_element.first_property, *vertices, *temp.f) {
-			print("Failed to parse vertices\n");
+			log("Failed to parse vertices\n");
 			return geo;
 		}
 
 		if !parse_binary_array(polys_element.first_property, *original_indicies) {
-			print("Failed to parse indices\n");
+			log("Failed to parse indices\n");
 			return geo;
 		}
 
 		build_geometry_vertex_data(geo, *vertices, *original_indicies, *to_old_indicies, triangulate, allocator);
 
 		if !parse_geometry_materials(geo, element, *original_indicies, *to_old_indicies, *temp) {
-			print("Failed to parse geometry materials\n");
+			log("Failed to parse geometry materials\n");
 			return geo;
 		}
 
 		if !parse_geometry_uvs(geo, element, *original_indicies, *to_old_indicies, *temp) {
-			print("failed to parse_geometry_uvs\n");
+			log("failed to parse_geometry_uvs\n");
 			return geo;
 		}
 
 		if !parse_geometry_tangents(geo, element, *original_indicies, *to_old_indicies, *temp) {
-			print("failed to parse_geometry_tangents\n");
+			log("failed to parse_geometry_tangents\n");
 			return geo;
 		}
 
 		if !parse_geometry_colors(geo, element, *original_indicies, *to_old_indicies, *temp) {
-			print("failed to parse_geometry_colors\n");
+			log("failed to parse_geometry_colors\n");
 			return geo;
 		}
 
 		if !parse_geometry_normals(geo, element, *original_indicies, *to_old_indicies, *temp) {
-			print("failed to parse_geometry_normals\n");
+			log("failed to parse_geometry_normals\n");
 			return geo;
 		}
 
@@ -2280,7 +2280,7 @@ ofbx :: struct {
     	if times != null && times.first_property != null {
         	anim_curve.times = NewArray(times.first_property.length, s64, false, allocator);
     		if !parse_array_raw(times.first_property, *anim_curve.times.data[0], anim_curve.times.count * size_of(s64)) {
-    			print("Invalid Animation Curve. %\n", #line);
+    			log("Invalid Animation Curve. %\n", #line);
     			return null;
     		}
     	}
@@ -2288,13 +2288,13 @@ ofbx :: struct {
     	if values != null && values.first_property != null {
         	anim_curve.values = NewArray(values.first_property.length, float, false, allocator);
     		if !parse_array_raw(values.first_property, *anim_curve.values.data[0], anim_curve.values.count * size_of(float)) {
-    			print("Invalid Animation Curve. %\n", #line);
+    			log("Invalid Animation Curve. %\n", #line);
     			return null;
     		}
     	}
 
     	if anim_curve.times.count != anim_curve.values.count {
-    		print("Times, and Values mismatch. %\n", #line);
+    		log("Times, and Values mismatch. %\n", #line);
     	}
 
     	return anim_curve;
@@ -2307,7 +2307,7 @@ ofbx :: struct {
     	if transform_link != null && transform_link.first_property != null {
     		m4: Matrix4f64;
     		if !parse_array_raw(transform_link.first_property, *m4, size_of(Matrix4f64)) {
-    			print("Failed to parse TransformLink. %\n", #line);
+    			log("Failed to parse TransformLink. %\n", #line);
     		}
     		cluster.transform_link_matrix = to_matrix4(m4);
     	}
@@ -2316,7 +2316,7 @@ ofbx :: struct {
     	if transform != null && transform.first_property != null {
     		m4: Matrix4f64;
     		if !parse_array_raw(transform.first_property, *m4, size_of(Matrix4f64)) {
-    			print("Failed to parse transform. %\n", #line);
+    			log("Failed to parse transform. %\n", #line);
     		}
     		cluster.transform_matrix = to_matrix4(m4);
     	}
