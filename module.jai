@@ -181,6 +181,15 @@ ofbx :: struct {
     		}
     		return null;
     	}
+
+    	get_global_transform :: (this: *Object) -> Matrix4 {
+    		parent := Object.get_parent(this);
+    		if parent == null {
+    			return eval_local(this, get_local_translation(this), get_local_rotation(this), get_local_scaling(this));
+    		}
+
+    		return get_global_transform(parent) * eval_local(this, get_local_translation(this), get_local_rotation(this), get_local_scaling(this));
+    	}
 	}
 
 	Vector2f64 :: struct {
@@ -636,6 +645,18 @@ ofbx :: struct {
 			mesh.is_node = true;
 			mesh.materials.allocator = allocator;
 			return mesh;
+		}
+
+		get_geometric_matrix :: (this: *Mesh) -> Matrix4 {
+			translation := resolve_vec3_property(this, "GeometricTranslation", .{0, 0, 0});
+			rotation := resolve_vec3_property(this, "GeometricRotation", .{0, 0, 0});
+			scale := resolve_vec3_property(this, "GeometricScaling", .{1, 1, 1});
+
+			t := make_translation_matrix4(translation);
+            r := get_rotation_matrix(rotation, .EULER_XYZ);
+            s := make_scale_matrix4(scale);
+
+			return t * r * s;
 		}
 	}
 
@@ -1220,22 +1241,22 @@ ofbx :: struct {
     }
 
     is_end_line :: (d: *Deserializer) -> bool {
-    	c := peak(d, u8);
-		return c == #char "\n" || c == #char "\r" && d.cursor + 1 < d.buffer.count && peak(d, u8, 1) != #char "\n";
+    	c := peek(d, u8);
+		return c == #char "\n" || c == #char "\r" && d.cursor + 1 < d.buffer.count && peek(d, u8, 1) != #char "\n";
     }
 
     skip_insignificant_whitespace :: (d: *Deserializer) {
-    	while d.cursor < d.buffer.count && is_space(peak(d, u8)) && !is_end_line(d) {
+    	while d.cursor < d.buffer.count && is_space(peek(d, u8)) && !is_end_line(d) {
     		advance(d, 1);
     	}
     }
 
     skip_whitespaces :: (d: *Deserializer) {
-    	while d.cursor < d.buffer.count && is_space(peak(d, u8)) {
+    	while d.cursor < d.buffer.count && is_space(peek(d, u8)) {
     		advance(d, 1);
     	}
 
-    	while d.cursor < d.buffer.count && peak(d, u8) == #char ";" {
+    	while d.cursor < d.buffer.count && peek(d, u8) == #char ";" {
     		skip_line(d);
     	}
     }
@@ -1261,7 +1282,7 @@ ofbx :: struct {
 		d := make_deserializer(_data);
 
 		while d.cursor < d.buffer.count {
-			c := peak(*d, u8);
+			c := peek(*d, u8);
 			if c == #char ";" || c == #char "\r" || c == #char "\n" {
 				skip_line(*d);
 			} else {
@@ -1303,7 +1324,7 @@ ofbx :: struct {
     		return null;
     	}
 
-    	if peak(d, u8) != #char ":" {
+    	if peek(d, u8) != #char ":" {
     		log("Unexpected character\n");
     		return null;
     	}
@@ -1321,13 +1342,13 @@ ofbx :: struct {
 
     	prop_link := *element.first_property;
 
-    	while d.cursor < d.buffer.count && !is_end_line(d) && peak(d, u8) != #char "{" {
+    	while d.cursor < d.buffer.count && !is_end_line(d) && peek(d, u8) != #char "{" {
     		prop := read_text_property(d, allocator);
     		if prop == null {
     			return null;
     		}
 
-    		if d.cursor < d.buffer.count && peak(d, u8) == #char "," {
+    		if d.cursor < d.buffer.count && peek(d, u8) == #char "," {
     			advance(d, 1);
     			skip_whitespaces(d);
     		}
@@ -1339,10 +1360,10 @@ ofbx :: struct {
     	}
 
     	link := *element.child;
-    	if peak(d, u8) == #char "{" {
+    	if peek(d, u8) == #char "{" {
     		advance(d, 1);
     		skip_whitespaces(d);
-    		while d.cursor < d.buffer.count && peak(d, u8) != #char "}" {
+    		while d.cursor < d.buffer.count && peek(d, u8) != #char "}" {
     			child := read_text_element(d, allocator);
     			if child == null {
     				return null;
@@ -1362,13 +1383,13 @@ ofbx :: struct {
     	prop := New(Property, true, allocator);
     	prop.is_binary = false;
 
-    	nc := peak(d, u8);
+    	nc := peek(d, u8);
     	if nc == #char "\"" {
     		prop.type = .STRING;
     		advance(d, 1);
 
     		count := 0;
-    		while d.cursor < d.buffer.count && peak(d, u8) != #char "\"" {
+    		while d.cursor < d.buffer.count && peek(d, u8) != #char "\"" {
     			count += 1;
     		}
 
@@ -1381,12 +1402,12 @@ ofbx :: struct {
 
     		count := 0;
     		if nc == #char "-" then count += 1;
-    		while d.cursor < d.buffer.count && is_digit(peak(d, u8)) {
+    		while d.cursor < d.buffer.count && is_digit(peek(d, u8)) {
     			count += 1;
     		}
     		prop.value = to_string(read(d, u8, count));
 
-    		if d.cursor < d.buffer.count && peak(d, u8) == #char "." {
+    		if d.cursor < d.buffer.count && peek(d, u8) == #char "." {
     			prop.type = .DOUBLE;
     			advance(d, 1);
 
@@ -1404,7 +1425,7 @@ ofbx :: struct {
     		prop.type = xx #char "l";
     		advance(d, 1);
 
-    		while d.cursor < d.buffer.count && peak(d, u8) != #char ":" {
+    		while d.cursor < d.buffer.count && peek(d, u8) != #char ":" {
     			advance(d, 1);
     		}
 
@@ -1415,15 +1436,15 @@ ofbx :: struct {
     		is_any := false;
 
     		count := 0;
-    		while d.cursor < d.buffer.count && peak(d, u8) != #char "}" {
-    			if peak(d, u8) == #char "," {
+    		while d.cursor < d.buffer.count && peek(d, u8) != #char "}" {
+    			if peek(d, u8) == #char "," {
     				if is_any then prop.count += 1;
     				is_any = false;
-    			} else if !is_space(peak(d, u8)) && !is_end_line(d) {
+    			} else if !is_space(peek(d, u8)) && !is_end_line(d) {
     				is_any = true;
     			}
 
-    			if peak(d, u8) == #char "." then prop.type = xx #char "d";
+    			if peek(d, u8) == #char "." then prop.type = xx #char "d";
     			count += 1;
     		}
 
