@@ -1089,19 +1089,19 @@ ofbx :: struct {
     }
 
     decompress :: (in: *u8, in_size: u64, out: *u8, out_size: u64) -> bool {
-        stream: mz_stream;
-        mz_inflateInit(*stream);
+        stream: miniz.mz_stream;
+        miniz.mz_inflateInit(*stream);
 
         stream.avail_in = xx in_size;
         stream.next_in = in;
         stream.avail_out = xx out_size;
         stream.next_out = out;
 
-        status := mz_inflate(*stream, xx MZ_2.MZ_SYNC_FLUSH);
+        status := miniz.mz_inflate(*stream, xx miniz.MZ_2.MZ_SYNC_FLUSH);
 
-        if status != xx MZ_3.MZ_STREAM_END && status != xx MZ_3.MZ_OK then return false;
+        if status != xx miniz.MZ_3.MZ_STREAM_END && status != xx miniz.MZ_3.MZ_OK then return false;
 
-        return mz_inflateEnd(*stream) == xx MZ_3.MZ_OK;
+        return miniz.mz_inflateEnd(*stream) == xx miniz.MZ_3.MZ_OK;
     }
 
     Element :: struct {
